@@ -14,3 +14,4 @@ axum = { version = "0.2", default-features = false }
 tokio = { version = "1.11", default-features = false, features = ["rt-multi-thread"] }
 tower-http = { version = "0.1", features = ["trace"] }
 tower = "0.4"
+fastrand = "1.5"

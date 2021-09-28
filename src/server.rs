@@ -9,15 +9,22 @@ use tower::ServiceBuilder;
 use crate::wasm_bindgen::WasmBindgenOutput;
 use crate::Result;
 
+fn generate_version() -> String {
+    std::iter::repeat_with(fastrand::alphanumeric).take(12).collect()
+}
+
 pub async fn run_server(output: WasmBindgenOutput) -> Result<()> {
     let WasmBindgenOutput { js, wasm } = output;
 
     let middleware_stack = ServiceBuilder::new().into_inner();
 
+    let version = generate_version();
+
     let app = Router::new()
         .route("/", get(|| async { Html(include_str!("../static/index.html")) }))
         .route("/wasm.js", get(|| async { WithContentType("application/javascript", js) }))
         .route("/wasm.wasm", get(|| async { WithContentType("application/wasm", wasm) }))
+        .route("/version", get(move || async { version }))
         .layer(middleware_stack);
 
     let port = pick_port::pick_free_port(1334, 10).unwrap_or(1334);
