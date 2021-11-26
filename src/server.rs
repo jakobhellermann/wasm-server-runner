@@ -1,8 +1,8 @@
 use std::net::SocketAddr;
 
-use axum::handler::get;
 use axum::http::{HeaderValue, Response};
 use axum::response::{Html, IntoResponse};
+use axum::routing::get;
 use axum::Router;
 use tower::ServiceBuilder;
 
