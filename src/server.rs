@@ -1,10 +1,11 @@
 use std::net::SocketAddr;
 
-use axum::http::HeaderValue;
+use axum::http::{HeaderValue, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
-use axum::routing::get;
+use axum::routing::{get, get_service};
 use axum::Router;
 use tower::ServiceBuilder;
+use tower_http::services::ServeDir;
 
 use crate::wasm_bindgen::WasmBindgenOutput;
 use crate::Result;
@@ -26,11 +27,14 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
 
     let html = include_str!("../static/index.html").replace("{{ TITLE }}", &options.title);
 
+    let serve_dir = get_service(ServeDir::new(".")).handle_error(internal_server_error);
+
     let app = Router::new()
         .route("/", get(move || async { Html(html) }))
-        .route("/wasm.js", get(|| async { WithContentType("application/javascript", js) }))
-        .route("/wasm.wasm", get(|| async { WithContentType("application/wasm", wasm) }))
-        .route("/version", get(move || async { version }))
+        .route("/api/wasm.js", get(|| async { WithContentType("application/javascript", js) }))
+        .route("/api/wasm.wasm", get(|| async { WithContentType("application/wasm", wasm) }))
+        .route("/api/version", get(move || async { version }))
+        .fallback(serve_dir)
         .layer(middleware_stack);
 
     let port = pick_port::pick_free_port(1334, 10).unwrap_or(1334);
@@ -49,6 +53,10 @@ impl<T: IntoResponse> IntoResponse for WithContentType<T> {
         response.headers_mut().insert("Content-Type", HeaderValue::from_static(self.0));
         response
     }
+}
+
+async fn internal_server_error(error: std::io::Error) -> impl IntoResponse {
+    (StatusCode::INTERNAL_SERVER_ERROR, format!("Unhandled internal error: {}", error))
 }
 
 mod pick_port {

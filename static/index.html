@@ -11,17 +11,17 @@
 
 <body>
     <script type="module">
-        import init from "./wasm.js";
+        import init from "./api/wasm.js";
 
         async function run() {
-            await init("/wasm.wasm");
+            await init("/api/wasm.wasm");
         }
 
         const reloadInterval = 1000;
         const maxFailCount = 5;
 
         async function startReloadInterval() {
-            const fetchVersion = () => fetch("/version").then(response => response.text());
+            const fetchVersion = () => fetch("/api/version").then(response => response.text());
             const version = await fetchVersion();
             let failedCount = 0;
             let intervalToken;
