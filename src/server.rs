@@ -1,7 +1,7 @@
 use std::net::SocketAddr;
 
-use axum::http::{HeaderValue, Response};
-use axum::response::{Html, IntoResponse};
+use axum::http::HeaderValue;
+use axum::response::{Html, IntoResponse, Response};
 use axum::routing::get;
 use axum::Router;
 use tower::ServiceBuilder;
@@ -44,10 +44,7 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
 
 struct WithContentType<T>(&'static str, T);
 impl<T: IntoResponse> IntoResponse for WithContentType<T> {
-    type Body = T::Body;
-    type BodyError = T::BodyError;
-
-    fn into_response(self) -> Response<Self::Body> {
+    fn into_response(self) -> Response {
         let mut response = self.1.into_response();
         response.headers_mut().insert("Content-Type", HeaderValue::from_static(self.0));
         response
