@@ -30,7 +30,7 @@ fn main() -> Result<(), anyhow::Error> {
 
     let output = wasm_bindgen::generate(&wasm_file)?;
 
-    info!("wasm output is {} large", pretty_size(output.wasm.len()));
+    info!("wasm output is {} large", pretty_size(output.compressed_wasm.len()));
 
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(server::run_server(options, output))?;

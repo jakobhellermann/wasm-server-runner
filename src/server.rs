@@ -1,7 +1,7 @@
 use std::net::SocketAddr;
 
 use axum::http::{HeaderValue, StatusCode};
-use axum::response::{Html, IntoResponse, Response};
+use axum::response::{Headers, Html, IntoResponse, Response};
 use axum::routing::{get, get_service};
 use axum::Router;
 use tower::ServiceBuilder;
@@ -19,7 +19,7 @@ pub struct Options {
 }
 
 pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<()> {
-    let WasmBindgenOutput { js, wasm } = output;
+    let WasmBindgenOutput { js, compressed_wasm } = output;
 
     let middleware_stack = ServiceBuilder::new().into_inner();
 
@@ -29,10 +29,16 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
 
     let serve_dir = get_service(ServeDir::new(".")).handle_error(internal_server_error);
 
+    let serve_wasm = || async move {
+        let headers = Headers(std::iter::once(("Content-Encoding", "gzip")));
+        let response = WithContentType("application/wasm", compressed_wasm);
+        (headers, response)
+    };
+
     let app = Router::new()
         .route("/", get(move || async { Html(html) }))
         .route("/api/wasm.js", get(|| async { WithContentType("application/javascript", js) }))
-        .route("/api/wasm.wasm", get(|| async { WithContentType("application/wasm", wasm) }))
+        .route("/api/wasm.wasm", get(serve_wasm))
         .route("/api/version", get(move || async { version }))
         .fallback(serve_dir)
         .layer(middleware_stack);
