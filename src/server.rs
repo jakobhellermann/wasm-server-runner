@@ -16,7 +16,8 @@ fn generate_version() -> String {
 
 pub struct Options {
     pub title: String,
-}
+    pub address: String,
+} 
 
 pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<()> {
     let WasmBindgenOutput { js, compressed_wasm } = output;
@@ -43,8 +44,11 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
         .fallback(serve_dir)
         .layer(middleware_stack);
 
-    let port = pick_port::pick_free_port(1334, 10).unwrap_or(1334);
-    let addr = SocketAddr::from(([127, 0, 0, 1], port));
+    let mut address_string = options.address;
+    if !address_string.contains(":") {
+        address_string += &(":".to_owned() + &pick_port::pick_free_port(1334, 10).unwrap_or(1334).to_string());
+    }
+    let addr: SocketAddr = address_string.parse().expect("Couldn't parse address");
 
     tracing::info!("starting webserver at http://{}", addr);
     axum::Server::bind(&addr).serve(app.into_make_service()).await?;
