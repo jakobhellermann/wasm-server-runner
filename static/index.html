@@ -60,6 +60,13 @@
         run();
         startReloadInterval();
     </script>
+
+	<script>
+		document.body.addEventListener("contextmenu", (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+		});
+	</script>
 </body>
 
 </html>
