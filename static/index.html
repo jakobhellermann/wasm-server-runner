@@ -30,7 +30,7 @@
         }
 
         const reloadInterval = 1000;
-        const maxFailCount = 5;
+        const maxFailCount = 20;
 
         async function startReloadInterval() {
             const fetchVersion = () => fetch("/api/version").then(response => response.text());
@@ -61,12 +61,12 @@
         startReloadInterval();
     </script>
 
-	<script>
-		document.body.addEventListener("contextmenu", (e) => {
-			e.preventDefault();
-			e.stopPropagation();
-		});
-	</script>
+    <script>
+        document.body.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+    </script>
 </body>
 
 </html>
