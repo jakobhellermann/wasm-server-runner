@@ -11,7 +11,7 @@ description = "cargo run for wasm programs"
 
 [dependencies]
 anyhow = "1.0"
-tracing = "0.1"
+tracing = { version = "0.1", default-features = false, features = ["release_max_level_debug"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 wasm-bindgen-cli-support = "0.2"
