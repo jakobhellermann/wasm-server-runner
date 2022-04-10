@@ -1,9 +1,10 @@
 use std::net::SocketAddr;
 
+use axum::headers::ContentEncoding;
 use axum::http::{HeaderValue, StatusCode};
-use axum::response::{Headers, Html, IntoResponse, Response};
+use axum::response::{Html, IntoResponse, Response};
 use axum::routing::{get, get_service};
-use axum::Router;
+use axum::{Router, TypedHeader};
 use tower::ServiceBuilder;
 use tower_http::services::ServeDir;
 
@@ -31,9 +32,7 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
     let serve_dir = get_service(ServeDir::new(".")).handle_error(internal_server_error);
 
     let serve_wasm = || async move {
-        let headers = Headers(std::iter::once(("Content-Encoding", "gzip")));
-        let response = WithContentType("application/wasm", compressed_wasm);
-        (headers, response)
+        (TypedHeader(ContentEncoding::gzip()), WithContentType("application/wasm", compressed_wasm))
     };
 
     let app = Router::new()
@@ -46,7 +45,8 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
 
     let mut address_string = options.address;
     if !address_string.contains(":") {
-        address_string += &(":".to_owned() + &pick_port::pick_free_port(1334, 10).unwrap_or(1334).to_string());
+        address_string +=
+            &(":".to_owned() + &pick_port::pick_free_port(1334, 10).unwrap_or(1334).to_string());
     }
     let addr: SocketAddr = address_string.parse().expect("Couldn't parse address");
 

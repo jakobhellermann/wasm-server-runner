@@ -17,7 +17,8 @@ fn main() -> Result<(), anyhow::Error> {
     tracing_subscriber::fmt::fmt().without_time().with_env_filter(filter).init();
 
     let title = std::env::var("CARGO_PKG_NAME").unwrap_or_else(|_| "".to_string());
-    let address = std::env::var("WASM_SERVER_RUNNER_ADDRESS").unwrap_or_else(|_| "127.0.0.1".to_string());
+    let address =
+        std::env::var("WASM_SERVER_RUNNER_ADDRESS").unwrap_or_else(|_| "127.0.0.1".to_string());
 
     let options = Options { title, address };
 
