@@ -30,12 +30,10 @@
         }
 
         const reloadInterval = 1000;
-        const maxFailCount = 20;
 
         async function startReloadInterval() {
             const fetchVersion = () => fetch("/api/version").then(response => response.text());
             const version = await fetchVersion();
-            let failedCount = 0;
             let intervalToken;
 
             function reloadIfChanged() {
@@ -43,13 +41,6 @@
                     .then(newVersion => {
                         if (version != newVersion) {
                             window.location.reload();
-                        }
-                    })
-                    .catch(e => {
-                        failedCount += 1;
-                        if (failedCount >= maxFailCount) {
-                            clearInterval(intervalToken);
-                            console.warn("Server disconnected");
                         }
                     });
             }
