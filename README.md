@@ -12,7 +12,7 @@ cargo install wasm-server-runner
 
 ### Step 2.
 
-Add this to your `~/.cargo/config.toml`:
+Add this to your `~/.cargo/config.toml` (**not** the `Cargo.toml` of your project!):
 
 ```toml
 [target.wasm32-unknown-unknown]
