@@ -1,12 +1,13 @@
 use std::net::SocketAddr;
 
-use axum::headers::ContentEncoding;
+use axum::headers::{ContentEncoding, HeaderName};
 use axum::http::{HeaderValue, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
 use axum::routing::{get, get_service};
 use axum::{Router, TypedHeader};
 use tower::ServiceBuilder;
 use tower_http::services::ServeDir;
+use tower_http::set_header::SetResponseHeaderLayer;
 
 use crate::wasm_bindgen::WasmBindgenOutput;
 use crate::Result;
@@ -23,7 +24,16 @@ pub struct Options {
 pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<()> {
     let WasmBindgenOutput { js, compressed_wasm } = output;
 
-    let middleware_stack = ServiceBuilder::new().into_inner();
+    let middleware_stack = ServiceBuilder::new()
+        .layer(SetResponseHeaderLayer::if_not_present(
+            HeaderName::from_static("cross-origin-opener-policy"),
+            HeaderValue::from_static("same-origin"),
+        ))
+        .layer(SetResponseHeaderLayer::if_not_present(
+            HeaderName::from_static("cross-origin-embedder-policy"),
+            HeaderValue::from_static("require-corp"),
+        ))
+        .into_inner();
 
     let version = generate_version();
 
