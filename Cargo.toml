@@ -18,7 +18,6 @@ wasm-bindgen-cli-support = "0.2"
 
 axum = { version = "0.5", default-features = false, features = ["http1", "headers"] }
 tokio = { version = "1.11", default-features = false, features = ["rt-multi-thread"] }
-tower-http = { version = "0.3", features = ["fs", "set-header", "trace"] }
+tower-http = { version = "0.3", features = ["compression-full", "fs", "set-header", "trace"] }
 tower = "0.4"
 fastrand = "1.5"
-flate2 = "1.0"
