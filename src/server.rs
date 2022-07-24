@@ -5,6 +5,7 @@ use axum::http::{HeaderValue, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
 use axum::routing::{get, get_service};
 use axum::{Router, TypedHeader};
+use axum_server::tls_rustls::RustlsConfig;
 use tower::ServiceBuilder;
 use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
@@ -60,8 +61,20 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
     }
     let addr: SocketAddr = address_string.parse().expect("Couldn't parse address");
 
-    tracing::info!("starting webserver at http://{}", addr);
-    axum::Server::bind(&addr).serve(app.into_make_service()).await?;
+    if std::env::var("WASM_SERVER_RUNNER_HTTPS").unwrap_or_else(|_| String::from("0")) == "1" {
+        let certificate = rcgen::generate_simple_self_signed([])?;
+        let config = RustlsConfig::from_der(
+            vec![certificate.serialize_der()?],
+            certificate.serialize_private_key_der(),
+        )
+        .await?;
+
+        tracing::info!("starting webserver at https://{}", addr);
+        axum_server::bind_rustls(addr, config).serve(app.into_make_service()).await?;
+    } else {
+        tracing::info!("starting webserver at http://{}", addr);
+        axum_server::bind(addr).serve(app.into_make_service()).await?;
+    }
 
     Ok(())
 }
