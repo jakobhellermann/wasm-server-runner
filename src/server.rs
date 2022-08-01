@@ -6,6 +6,7 @@ use axum::response::{Html, IntoResponse, Response};
 use axum::routing::{get, get_service};
 use axum::{Router, TypedHeader};
 use axum_server::tls_rustls::RustlsConfig;
+use axum_server_dual_protocol::ServerExt;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::services::ServeDir;
@@ -73,7 +74,10 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
         .await?;
 
         tracing::info!("starting webserver at https://{}", addr);
-        axum_server::bind_rustls(addr, config).serve(app.into_make_service()).await?;
+        axum_server_dual_protocol::bind_dual_protocol(addr, config)
+            .set_upgrade(true)
+            .serve(app.into_make_service())
+            .await?;
     } else {
         tracing::info!("starting webserver at http://{}", addr);
         axum_server::bind(addr).serve(app.into_make_service()).await?;
