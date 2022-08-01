@@ -19,8 +19,10 @@ fn main() -> Result<(), anyhow::Error> {
     let title = std::env::var("CARGO_PKG_NAME").unwrap_or_else(|_| "".to_string());
     let address =
         std::env::var("WASM_SERVER_RUNNER_ADDRESS").unwrap_or_else(|_| "127.0.0.1".to_string());
+    let https =
+        std::env::var("WASM_SERVER_RUNNER_HTTPS").unwrap_or_else(|_| String::from("0")) == "1";
 
-    let options = Options { title, address };
+    let options = Options { title, address, https };
 
     let wasm_file = std::env::args()
         .nth(1)
