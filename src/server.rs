@@ -52,7 +52,7 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
     let addr: SocketAddr = address_string.parse().expect("Couldn't parse address");
 
     if std::env::var("WASM_SERVER_RUNNER_HTTPS").unwrap_or_else(|_| String::from("0")) == "1" {
-        let certificate = rcgen::generate_simple_self_signed([])?;
+        let certificate = rcgen::generate_simple_self_signed([String::from("localhost")])?;
         let config = RustlsConfig::from_der(
             vec![certificate.serialize_der()?],
             certificate.serialize_private_key_der(),
