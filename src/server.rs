@@ -19,6 +19,7 @@ fn generate_version() -> String {
 pub struct Options {
     pub title: String,
     pub address: String,
+    pub https: bool,
 }
 
 pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<()> {
@@ -51,7 +52,7 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
     }
     let addr: SocketAddr = address_string.parse().expect("Couldn't parse address");
 
-    if std::env::var("WASM_SERVER_RUNNER_HTTPS").unwrap_or_else(|_| String::from("0")) == "1" {
+    if options.https {
         let certificate = rcgen::generate_simple_self_signed([String::from("localhost")])?;
         let config = RustlsConfig::from_der(
             vec![certificate.serialize_der()?],
