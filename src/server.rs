@@ -23,6 +23,7 @@ fn generate_version() -> String {
 pub struct Options {
     pub title: String,
     pub address: String,
+    pub directory: String,
     pub https: bool,
     pub no_module: bool,
 }
@@ -51,7 +52,8 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
     };
     let html = html.replace("{{ TITLE }}", &options.title);
 
-    let serve_dir = get_service(ServeDir::new(".")).handle_error(internal_server_error);
+    let serve_dir =
+        get_service(ServeDir::new(options.directory)).handle_error(internal_server_error);
 
     let serve_wasm = || async move {
         ([("content-encoding", "br")], WithContentType("application/wasm", compressed_wasm))
