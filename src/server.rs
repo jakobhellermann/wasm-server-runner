@@ -7,6 +7,7 @@ use axum::routing::{get, get_service};
 use axum::{Router, TypedHeader};
 use axum_server::tls_rustls::RustlsConfig;
 use tower::ServiceBuilder;
+use tower_http::compression::CompressionLayer;
 use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
 
@@ -27,6 +28,7 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
     let WasmBindgenOutput { js, compressed_wasm } = output;
 
     let middleware_stack = ServiceBuilder::new()
+        .layer(CompressionLayer::new())
         .layer(SetResponseHeaderLayer::if_not_present(
             HeaderName::from_static("cross-origin-opener-policy"),
             HeaderValue::from_static("same-origin"),
