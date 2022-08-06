@@ -3,8 +3,6 @@ use anyhow::Context;
 use std::path::Path;
 use tracing::debug;
 
-const COMPRESSION_LEVEL: u32 = 2;
-
 pub struct WasmBindgenOutput {
     pub js: String,
     pub compressed_wasm: Vec<u8>,
@@ -34,15 +32,11 @@ pub fn generate(wasm_file: &Path) -> Result<WasmBindgenOutput> {
     Ok(WasmBindgenOutput { js, compressed_wasm })
 }
 
-fn compress(bytes: &[u8]) -> Result<Vec<u8>, std::io::Error> {
-    use flate2::write::GzEncoder;
-    use flate2::Compression;
-    use std::io::prelude::*;
+fn compress(mut bytes: &[u8]) -> Result<Vec<u8>, std::io::Error> {
+    use brotli::enc::{self, BrotliEncoderParams};
 
-    let mut encoder = GzEncoder::new(Vec::new(), Compression::new(COMPRESSION_LEVEL));
+    let mut output = Vec::new();
+    enc::BrotliCompress(&mut bytes, &mut output, &BrotliEncoderParams::default())?;
 
-    encoder.write_all(bytes)?;
-    let compressed = encoder.finish()?;
-
-    Ok(compressed)
+    Ok(output)
 }
