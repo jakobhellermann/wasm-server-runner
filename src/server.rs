@@ -1,10 +1,10 @@
 use std::net::SocketAddr;
 
-use axum::headers::{ContentEncoding, HeaderName};
+use axum::headers::HeaderName;
 use axum::http::{HeaderValue, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
 use axum::routing::{get, get_service};
-use axum::{Router, TypedHeader};
+use axum::Router;
 use axum_server::tls_rustls::RustlsConfig;
 use tower::ServiceBuilder;
 use tower_http::services::ServeDir;
@@ -44,7 +44,7 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
     let serve_dir = get_service(ServeDir::new(".")).handle_error(internal_server_error);
 
     let serve_wasm = || async move {
-        (TypedHeader(ContentEncoding::gzip()), WithContentType("application/wasm", compressed_wasm))
+        ([("content-encoding", "br")], WithContentType("application/wasm", compressed_wasm))
     };
 
     let app = Router::new()
