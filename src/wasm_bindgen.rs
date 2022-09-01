@@ -1,3 +1,4 @@
+use crate::server::Options;
 use crate::Result;
 use anyhow::Context;
 use std::collections::HashMap;
@@ -10,14 +11,19 @@ pub struct WasmBindgenOutput {
     pub snippets: HashMap<String, Vec<String>>,
     pub local_modules: HashMap<String, String>,
 }
-pub fn generate(wasm_file: &Path) -> Result<WasmBindgenOutput> {
+pub fn generate(options: &Options, wasm_file: &Path) -> Result<WasmBindgenOutput> {
     debug!("running wasm-bindgen...");
     let start = std::time::Instant::now();
-    let mut output = wasm_bindgen_cli_support::Bindgen::new()
-        .input_path(wasm_file)
-        .web(true)?
-        .typescript(false)
-        .generate_output()?;
+    let mut bindgen = wasm_bindgen_cli_support::Bindgen::new();
+    bindgen.input_path(wasm_file).typescript(false);
+
+    if options.no_module {
+        bindgen.no_modules(true)?;
+    } else {
+        bindgen.web(true)?;
+    }
+
+    let mut output = bindgen.generate_output()?;
     debug!("finished wasm-bindgen (took {:?})", start.elapsed());
 
     let js = output.js().to_owned();

@@ -24,6 +24,7 @@ pub struct Options {
     pub title: String,
     pub address: String,
     pub https: bool,
+    pub no_module: bool,
 }
 
 pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<()> {
@@ -43,7 +44,12 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
 
     let version = generate_version();
 
-    let html = include_str!("../static/index.html").replace("{{ TITLE }}", &options.title);
+    let html = if options.no_module {
+        include_str!("../static/index_no_module.html")
+    } else {
+        include_str!("../static/index.html")
+    };
+    let html = html.replace("{{ TITLE }}", &options.title);
 
     let serve_dir = get_service(ServeDir::new(".")).handle_error(internal_server_error);
 
