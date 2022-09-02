@@ -1,7 +1,8 @@
+use std::collections::HashMap;
 use std::net::SocketAddr;
 
 use axum::headers::HeaderName;
-use axum::http::{HeaderValue, StatusCode};
+use axum::http::{HeaderValue, StatusCode, Uri};
 use axum::response::{Html, IntoResponse, Response};
 use axum::routing::{get, get_service};
 use axum::Router;
@@ -26,7 +27,7 @@ pub struct Options {
 }
 
 pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<()> {
-    let WasmBindgenOutput { js, compressed_wasm } = output;
+    let WasmBindgenOutput { js, compressed_wasm, snippets, local_modules } = output;
 
     let middleware_stack = ServiceBuilder::new()
         .layer(CompressionLayer::new())
@@ -55,6 +56,18 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
         .route("/api/wasm.js", get(|| async { WithContentType("application/javascript", js) }))
         .route("/api/wasm.wasm", get(serve_wasm))
         .route("/api/version", get(move || async { version }))
+        .nest(
+            "/api/snippets",
+            get(|uri: Uri| async move {
+                match get_snippet_source(&uri, &local_modules, &snippets) {
+                    Ok(source) => Ok(WithContentType("application/javascript", source)),
+                    Err(e) => {
+                        tracing::error!("failed to serve snippet `{uri}`: {e}");
+                        Err(e)
+                    }
+                }
+            }),
+        )
         .fallback(serve_dir)
         .layer(middleware_stack);
 
@@ -84,6 +97,26 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
     }
 
     Ok(())
+}
+
+fn get_snippet_source(
+    uri: &Uri,
+    local_modules: &HashMap<String, String>,
+    snippets: &HashMap<String, Vec<String>>,
+) -> Result<String, &'static str> {
+    let path = uri.path().trim_start_matches("/");
+    if let Some(module) = local_modules.get(path) {
+        return Ok(module.clone());
+    };
+
+    let (snippet, inline_snippet_name) = path.split_once("/").ok_or("invalid snippet path")?;
+    let index = inline_snippet_name
+        .strip_prefix("inline")
+        .and_then(|path| path.strip_suffix(".js"))
+        .ok_or("invalid snippet name")?;
+    let index: usize = index.parse().map_err(|_| "invalid index")?;
+    let snippet = snippets.get(snippet).unwrap().get(index).ok_or("snippet index out of bounds")?;
+    Ok(snippet.clone())
 }
 
 struct WithContentType<T>(&'static str, T);
