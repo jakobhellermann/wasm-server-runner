@@ -36,7 +36,10 @@ fn compress(mut bytes: &[u8]) -> Result<Vec<u8>, std::io::Error> {
     use brotli::enc::{self, BrotliEncoderParams};
 
     let mut output = Vec::new();
-    enc::BrotliCompress(&mut bytes, &mut output, &BrotliEncoderParams::default())?;
+    enc::BrotliCompress(&mut bytes, &mut output, &BrotliEncoderParams {
+        quality: 5, // https://github.com/jakobhellermann/wasm-server-runner/pull/22#issuecomment-1235804905
+        ..Default::default()
+    })?;
 
     Ok(output)
 }
