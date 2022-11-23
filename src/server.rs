@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 
 use axum::headers::HeaderName;
-use axum::http::{HeaderValue, StatusCode, Uri};
+use axum::http::{HeaderMap, HeaderValue, StatusCode, Uri};
 use axum::response::{Html, IntoResponse, Response};
 use axum::routing::{get, get_service};
 use axum::Router;
@@ -29,56 +29,7 @@ pub struct Options {
 }
 
 pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<()> {
-    let WasmBindgenOutput { js, compressed_wasm, snippets, local_modules } = output;
-
-    let middleware_stack = ServiceBuilder::new()
-        .layer(CompressionLayer::new())
-        .layer(SetResponseHeaderLayer::if_not_present(
-            HeaderName::from_static("cross-origin-opener-policy"),
-            HeaderValue::from_static("same-origin"),
-        ))
-        .layer(SetResponseHeaderLayer::if_not_present(
-            HeaderName::from_static("cross-origin-embedder-policy"),
-            HeaderValue::from_static("require-corp"),
-        ))
-        .into_inner();
-
-    let version = generate_version();
-
-    let html = if options.no_module {
-        include_str!("../static/index_no_module.html")
-    } else {
-        include_str!("../static/index.html")
-    };
-    let html = html.replace("{{ TITLE }}", &options.title);
-
-    let serve_dir =
-        get_service(ServeDir::new(options.directory)).handle_error(internal_server_error);
-
-    let serve_wasm = || async move {
-        ([("content-encoding", "br")], WithContentType("application/wasm", compressed_wasm))
-    };
-
-    let app = Router::new()
-        .route("/", get(move || async { Html(html) }))
-        .route("/api/wasm.js", get(|| async { WithContentType("application/javascript", js) }))
-        .route("/api/wasm.wasm", get(serve_wasm))
-        .route("/api/version", get(move || async { version }))
-        .nest(
-            "/api/snippets",
-            get(|uri: Uri| async move {
-                match get_snippet_source(&uri, &local_modules, &snippets) {
-                    Ok(source) => Ok(WithContentType("application/javascript", source)),
-                    Err(e) => {
-                        tracing::error!("failed to serve snippet `{uri}`: {e}");
-                        Err(e)
-                    }
-                }
-            }),
-        )
-        .fallback(serve_dir)
-        .layer(middleware_stack);
-
+    let app = get_router(&options, output);
     let mut address_string = options.address;
     if !address_string.contains(":") {
         address_string +=
@@ -105,6 +56,58 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
     }
 
     Ok(())
+}
+
+fn get_router(options: &Options, output: WasmBindgenOutput) -> Router {
+    let WasmBindgenOutput { js, compressed_wasm, snippets, local_modules } = output;
+
+    let middleware_stack = ServiceBuilder::new()
+        .layer(CompressionLayer::new())
+        .layer(SetResponseHeaderLayer::if_not_present(
+            HeaderName::from_static("cross-origin-opener-policy"),
+            HeaderValue::from_static("same-origin"),
+        ))
+        .layer(SetResponseHeaderLayer::if_not_present(
+            HeaderName::from_static("cross-origin-embedder-policy"),
+            HeaderValue::from_static("require-corp"),
+        ))
+        .into_inner();
+
+    let version = generate_version();
+
+    let html = if options.no_module {
+        include_str!("../static/index_no_module.html")
+    } else {
+        include_str!("../static/index.html")
+    };
+    let html = html.replace("{{ TITLE }}", &options.title);
+
+    let serve_dir =
+        get_service(ServeDir::new(options.directory.clone())).handle_error(internal_server_error);
+
+    let serve_wasm = || async move {
+        ([("content-encoding", "br")], WithContentType("application/wasm", compressed_wasm))
+    };
+
+    Router::new()
+        .route("/", get(move || async { Html(html) }))
+        .route("/api/wasm.js", get(|| async { WithContentType("application/javascript", js) }))
+        .route("/api/wasm.wasm", get(serve_wasm))
+        .route("/api/version", get(move || async { version }))
+        .nest(
+            "/api/snippets",
+            get(|uri: Uri| async move {
+                match get_snippet_source(&uri, &local_modules, &snippets) {
+                    Ok(source) => Ok(WithContentType("application/javascript", source)),
+                    Err(e) => {
+                        tracing::error!("failed to serve snippet `{uri}`: {e}");
+                        Err(e)
+                    }
+                }
+            }),
+        )
+        .fallback(serve_dir)
+        .layer(middleware_stack)
 }
 
 fn get_snippet_source(
@@ -163,5 +166,59 @@ mod pick_port {
         (starting_at..=starting_at + try_consecutive)
             .find(|&port| is_free_tcp(port))
             .or_else(ask_free_tcp_port)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use crate::server::get_router;
+    use crate::wasm_bindgen::WasmBindgenOutput;
+    use crate::Options;
+    use axum::http::StatusCode;
+    use axum_test_helper::TestClient;
+
+    const FAKE_BR_COMPRESSED_WASM: [u8; 4] = [1, 2, 3, 4];
+
+    fn fake_options() -> Options {
+        Options {
+            title: "title".to_string(),
+            address: "127.0.0.1:0".to_string(),
+            directory: ".".to_string(),
+            https: false,
+            no_module: false,
+        }
+    }
+
+    fn fake_wasm_bindgen_output() -> WasmBindgenOutput {
+        WasmBindgenOutput {
+            js: "fake js".to_string(),
+            compressed_wasm: FAKE_BR_COMPRESSED_WASM.to_vec(),
+            snippets: HashMap::<String, Vec<String>>::new(),
+            local_modules: HashMap::<String, String>::new(),
+        }
+    }
+
+    fn make_test_client() -> TestClient {
+        let options = fake_options();
+        let output = fake_wasm_bindgen_output();
+        let router = get_router(&options, output);
+        TestClient::new(router)
+    }
+
+    #[tokio::test]
+    async fn test_router() {
+        let client = make_test_client();
+
+        // Test with br compression requested
+        let mut res = client
+            .get("/api/wasm.wasm")
+            .header("accept-encoding", "gzip, deflate, br")
+            .send()
+            .await;
+        assert_eq!(res.status(), StatusCode::OK);
+        let result = res.chunk().await.unwrap();
+        assert_eq!(result.to_vec(), FAKE_BR_COMPRESSED_WASM);
     }
 }

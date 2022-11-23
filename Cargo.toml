@@ -25,3 +25,7 @@ tower = "0.4"
 fastrand = "1.5"
 brotli = { version = "3", default-features = false, features = ["std"]}
 rcgen = { version = "0.9", default-features = false }
+
+[dev-dependencies]
+tokio-test = "0.4"
+axum-test-helper = "0.1"
