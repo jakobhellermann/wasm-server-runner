@@ -5,9 +5,12 @@ use std::collections::HashMap;
 use std::path::Path;
 use tracing::debug;
 
+const COMPRESSION_LEVEL: u32 = 2;
+
 pub struct WasmBindgenOutput {
     pub js: String,
-    pub compressed_wasm: Vec<u8>,
+    pub br_compressed_wasm: Vec<u8>,
+    pub gzip_compressed_wasm: Vec<u8>,
     pub snippets: HashMap<String, Vec<String>>,
     pub local_modules: HashMap<String, String>,
 }
@@ -35,22 +38,44 @@ pub fn generate(options: &Options, wasm_file: &Path) -> Result<WasmBindgenOutput
     let wasm = output.wasm_mut().emit_wasm();
     debug!("emitting wasm took {:?}", start.elapsed());
 
-    debug!("compressing wasm...");
+    debug!("br compressing wasm...");
     let start = std::time::Instant::now();
-    let compressed_wasm = compress(&wasm).context("failed to compress wasm file")?;
+    let br_compressed_wasm = br_compress(&wasm).context("failed to compress wasm file")?;
     debug!("compressing took {:?}", start.elapsed());
 
-    Ok(WasmBindgenOutput { js, compressed_wasm, snippets, local_modules })
+    debug!("gzip compressing wasm...");
+    let start = std::time::Instant::now();
+    let gzip_compressed_wasm = gzip_compress(&wasm).context("failed to compress wasm file")?;
+    debug!("compressing took {:?}", start.elapsed());
+
+    Ok(WasmBindgenOutput { js, br_compressed_wasm, gzip_compressed_wasm, snippets, local_modules })
 }
 
-fn compress(mut bytes: &[u8]) -> Result<Vec<u8>, std::io::Error> {
+fn br_compress(mut bytes: &[u8]) -> Result<Vec<u8>, std::io::Error> {
     use brotli::enc::{self, BrotliEncoderParams};
 
     let mut output = Vec::new();
-    enc::BrotliCompress(&mut bytes, &mut output, &BrotliEncoderParams {
-        quality: 5, // https://github.com/jakobhellermann/wasm-server-runner/pull/22#issuecomment-1235804905
-        ..Default::default()
-    })?;
+    enc::BrotliCompress(
+        &mut bytes,
+        &mut output,
+        &BrotliEncoderParams {
+            quality: 5, // https://github.com/jakobhellermann/wasm-server-runner/pull/22#issuecomment-1235804905
+            ..Default::default()
+        },
+    )?;
 
     Ok(output)
+}
+
+fn gzip_compress(bytes: &[u8]) -> Result<Vec<u8>, std::io::Error> {
+    use flate2::write::GzEncoder;
+    use flate2::Compression;
+    use std::io::prelude::*;
+
+    let mut encoder = GzEncoder::new(Vec::new(), Compression::new(COMPRESSION_LEVEL));
+
+    encoder.write_all(bytes)?;
+    let compressed = encoder.finish()?;
+
+    Ok(compressed)
 }

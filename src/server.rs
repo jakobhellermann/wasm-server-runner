@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 use std::net::SocketAddr;
+use std::str::from_utf8;
 
 use axum::headers::HeaderName;
+use axum::http::header::ACCEPT_ENCODING;
 use axum::http::{HeaderMap, HeaderValue, StatusCode, Uri};
 use axum::response::{Html, IntoResponse, Response};
 use axum::routing::{get, get_service};
@@ -59,7 +61,8 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
 }
 
 fn get_router(options: &Options, output: WasmBindgenOutput) -> Router {
-    let WasmBindgenOutput { js, compressed_wasm, snippets, local_modules } = output;
+    let WasmBindgenOutput { js, br_compressed_wasm, gzip_compressed_wasm, snippets, local_modules } =
+        output;
 
     let middleware_stack = ServiceBuilder::new()
         .layer(CompressionLayer::new())
@@ -85,8 +88,35 @@ fn get_router(options: &Options, output: WasmBindgenOutput) -> Router {
     let serve_dir =
         get_service(ServeDir::new(options.directory.clone())).handle_error(internal_server_error);
 
-    let serve_wasm = || async move {
-        ([("content-encoding", "br")], WithContentType("application/wasm", compressed_wasm))
+    let serve_wasm = |headers: HeaderMap| async move {
+        if let Some(accept_encoding) = headers.get(ACCEPT_ENCODING) {
+            match from_utf8(accept_encoding.as_bytes()) {
+                Ok(encodings) => {
+                    let split_encodings: Vec<&str> = encodings.split(",").map(str::trim).collect();
+                    if split_encodings.contains(&"br") {
+                        Ok((
+                            [("content-encoding", "br")],
+                            WithContentType("application/wasm", br_compressed_wasm),
+                        ))
+                    } else if split_encodings.contains(&"gzip") {
+                        Ok((
+                            [("content-encoding", "gzip")],
+                            WithContentType("application/wasm", gzip_compressed_wasm),
+                        ))
+                    } else {
+                        tracing::warn!("Unsupported encoding in request for wasm.wasm");
+                        Err((
+                            StatusCode::BAD_REQUEST,
+                            format!("Unsupported encoding(s): {:?}", split_encodings),
+                        ))
+                    }
+                }
+                Err(err) => Err((StatusCode::BAD_REQUEST, err.to_string())),
+            }
+        } else {
+            tracing::error!("Received request missing the accept-encoding header");
+            Err((StatusCode::BAD_REQUEST, "Missing `accept-encoding` header".to_string()))
+        }
     };
 
     Router::new()
@@ -180,6 +210,7 @@ mod tests {
     use axum_test_helper::TestClient;
 
     const FAKE_BR_COMPRESSED_WASM: [u8; 4] = [1, 2, 3, 4];
+    const FAKE_GZIP_COMPRESSED_WASM: [u8; 4] = [0x1f, 0x8b, 0x08, 0x08];
 
     fn fake_options() -> Options {
         Options {
@@ -194,7 +225,8 @@ mod tests {
     fn fake_wasm_bindgen_output() -> WasmBindgenOutput {
         WasmBindgenOutput {
             js: "fake js".to_string(),
-            compressed_wasm: FAKE_BR_COMPRESSED_WASM.to_vec(),
+            br_compressed_wasm: FAKE_BR_COMPRESSED_WASM.to_vec(),
+            gzip_compressed_wasm: FAKE_GZIP_COMPRESSED_WASM.to_vec(),
             snippets: HashMap::<String, Vec<String>>::new(),
             local_modules: HashMap::<String, String>::new(),
         }
@@ -208,10 +240,17 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_router() {
+    async fn test_router_bad_request() {
         let client = make_test_client();
 
-        // Test with br compression requested
+        // Test without any supported compression
+        let res = client.get("/api/wasm.wasm").header("accept-encoding", "deflate").send().await;
+        assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn test_router_br() {
+        let client = make_test_client();
         let mut res = client
             .get("/api/wasm.wasm")
             .header("accept-encoding", "gzip, deflate, br")
@@ -220,5 +259,17 @@ mod tests {
         assert_eq!(res.status(), StatusCode::OK);
         let result = res.chunk().await.unwrap();
         assert_eq!(result.to_vec(), FAKE_BR_COMPRESSED_WASM);
+    }
+
+    #[tokio::test]
+    async fn test_router_gzip() {
+        let client = make_test_client();
+        // Test without br compression, defaulting to gzip
+        let mut res =
+            client.get("/api/wasm.wasm").header("accept-encoding", "gzip, deflate").send().await;
+        assert_eq!(res.status(), StatusCode::OK);
+        let result = res.chunk().await.unwrap();
+        // This is the gzip 3-byte file header
+        assert_eq!(result.to_vec(), FAKE_GZIP_COMPRESSED_WASM);
     }
 }
