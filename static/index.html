@@ -28,11 +28,12 @@
 </head>
 
 <body>
+    {{ NO_MODULE }}
     <script type="module">
-        import init from "./api/wasm.js";
+        {{ MODULE }}
 
         async function run() {
-            await init("/api/wasm.wasm");
+            await wasm_bindgen("/api/wasm.wasm");
         }
 
         const reloadInterval = 1000;

@@ -45,12 +45,15 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
 
     let version = generate_version();
 
-    let html = if options.no_module {
-        include_str!("../static/index_no_module.html")
+    let html = include_str!("../static/index.html");
+    let mut html = html.replace("{{ TITLE }}", &options.title);
+    if options.no_module {
+        html = html.replace("{{ NO_MODULE }}", "<script src=\"./api/wasm.js\"></script>");
+        html = html.replace("{{ MODULE }}", "");
     } else {
-        include_str!("../static/index.html")
+        html = html.replace("{{ MODULE }}", "import wasm_bindgen from './api/wasm.js';");
+        html = html.replace("{{ NO_MODULE }}", "");
     };
-    let html = html.replace("{{ TITLE }}", &options.title);
 
     let serve_dir =
         get_service(ServeDir::new(options.directory)).handle_error(internal_server_error);
