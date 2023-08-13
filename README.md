@@ -58,6 +58,9 @@ Default: `.`
 
 Can be used to specify where relative path requests are loaded from.
 
+If there is an `index.html` file within this directory it will be used instead of [the
+default](static/index.html).
+
 </details>
 
 <details>
