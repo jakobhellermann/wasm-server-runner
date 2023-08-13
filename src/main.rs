@@ -61,5 +61,5 @@ fn pretty_size(size_in_bytes: usize) -> String {
     }
 
     let size_in_mb = size_in_kb / 1024.0;
-    return format!("{:.2}mb", size_in_mb);
+    format!("{:.2}mb", size_in_mb)
 }
