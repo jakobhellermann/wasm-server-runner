@@ -46,7 +46,7 @@ fn main() -> Result<(), anyhow::Error> {
 
     let output = wasm_bindgen::generate(&options, &wasm_file)?;
 
-    info!("uncompressed wasm output is {} large", pretty_size(output.wasm.len()));
+    info!("uncompressed wasm output is {} in size", pretty_size(output.wasm.len()));
 
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(server::run_server(options, output))?;
