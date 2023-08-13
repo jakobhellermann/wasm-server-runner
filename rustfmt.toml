@@ -1,2 +1,2 @@
-imports_granularity="module"
-use_small_heuristics="max"
+imports_granularity = "Module"
+use_small_heuristics = "Max"
