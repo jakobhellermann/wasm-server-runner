@@ -45,8 +45,22 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
 
     let version = generate_version();
 
-    let html = include_str!("../static/index.html");
-    let mut html = html.replace("{{ TITLE }}", &options.title);
+    // Use a custom `index.html` if the user has one in the serving directory.
+    let mut html = match std::fs::read_to_string(
+        std::path::Path::new(&options.directory).join("index.html"),
+    ) {
+        Ok(user_html) => user_html.replace("{{ TITLE }}", &options.title),
+
+        // Fall back to the bundled `index.html`.
+        Err(_) => {
+            let default_html = include_str!("../static/index.html");
+
+            // Calling `replace` here gives us a `String`, which is what the other branch evaluates
+            // to.
+            default_html.replace("{{ TITLE }}", &options.title)
+        }
+    };
+
     if options.no_module {
         html = html.replace("{{ NO_MODULE }}", "<script src=\"./api/wasm.js\"></script>");
         html = html.replace("{{ MODULE }}", "");
