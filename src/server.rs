@@ -95,7 +95,7 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
         .layer(middleware_stack);
 
     let mut address_string = options.address;
-    if !address_string.contains(":") {
+    if !address_string.contains(':') {
         address_string +=
             &(":".to_owned() + &pick_port::pick_free_port(1334, 10).unwrap_or(1334).to_string());
     }
@@ -131,13 +131,17 @@ fn get_snippet_source(
         return Ok(module.clone());
     };
 
-    let (snippet, inline_snippet_name) = path.split_once("/").ok_or("invalid snippet path")?;
+    let (snippet, inline_snippet_name) = path.split_once('/').ok_or("invalid snippet path")?;
     let index = inline_snippet_name
         .strip_prefix("inline")
         .and_then(|path| path.strip_suffix(".js"))
         .ok_or("invalid snippet name in path")?;
     let index: usize = index.parse().map_err(|_| "invalid index")?;
-    let snippet = snippets.get(snippet).ok_or("invalid snippet name")?.get(index).ok_or("snippet index out of bounds")?;
+    let snippet = snippets
+        .get(snippet)
+        .ok_or("invalid snippet name")?
+        .get(index)
+        .ok_or("snippet index out of bounds")?;
     Ok(snippet.clone())
 }
 
