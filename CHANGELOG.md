@@ -1,3 +1,11 @@
+## 0.5.0
+- relay logging from website back to console
+- cache https certificates
+- load `index.html` from directory if present
+- accept `true`/`1`/`yes` for bool options
+- use proper compression negotiation
+- improve mobile support
+
 ## 0.4.0
 - add workaround to make audio triggered in wasm play with any user interaction
 - make sure body fills whole page
