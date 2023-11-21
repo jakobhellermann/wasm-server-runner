@@ -7,6 +7,7 @@ Allows you to run programs in the browser using web assembly using a simple `car
 ### Step 1.
 
 ```sh
+rustup target add wasm32-unknown-unknown
 cargo install wasm-server-runner
 ```
 
