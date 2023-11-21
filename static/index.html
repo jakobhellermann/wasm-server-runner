@@ -50,10 +50,11 @@
                         if (version != newVersion) {
                             window.location.reload();
                         }
-                    });
+                    })
+                    .catch(_ => { });
             }
 
-            intervalToken = setInterval(reloadIfChanged, reloadInterval)
+            intervalToken = setInterval(reloadIfChanged, reloadInterval);
         }
 
         run();
