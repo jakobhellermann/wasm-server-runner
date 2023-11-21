@@ -58,10 +58,10 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
     if options.no_module {
         html = html
             .replace("{{ NO_MODULE }}", "<script src=\"./api/wasm.js\"></script>")
-            .replace("{{ MODULE }}", "");
+            .replace("// {{ MODULE }}", "");
     } else {
         html = html
-            .replace("{{ MODULE }}", "import wasm_bindgen from './api/wasm.js';")
+            .replace("// {{ MODULE }}", "import wasm_bindgen from './api/wasm.js';")
             .replace("{{ NO_MODULE }}", "");
     };
 
