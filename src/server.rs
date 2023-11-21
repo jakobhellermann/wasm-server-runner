@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 use std::net::SocketAddr;
 
+use axum::error_handling::HandleError;
+use axum::extract::Path;
 use axum::headers::HeaderName;
-use axum::http::{HeaderValue, StatusCode, Uri};
+use axum::http::{HeaderValue, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
 use axum::routing::{get, get_service};
 use axum::Router;
@@ -56,28 +58,26 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
     };
 
     let serve_dir =
-        get_service(ServeDir::new(options.directory)).handle_error(internal_server_error);
-
-    let serve_wasm = || async move { WithContentType("application/wasm", wasm) };
+        HandleError::new(get_service(ServeDir::new(options.directory)), internal_server_error);
 
     let app = Router::new()
         .route("/", get(move || async { Html(html) }))
         .route("/api/wasm.js", get(|| async { WithContentType("application/javascript", js) }))
-        .route("/api/wasm.wasm", get(serve_wasm))
+        .route("/api/wasm.wasm", get(|| async { WithContentType("application/wasm", wasm) }))
         .route("/api/version", get(move || async { version }))
-        .nest(
-            "/api/snippets",
-            get(|uri: Uri| async move {
-                match get_snippet_source(&uri, &local_modules, &snippets) {
+        .route(
+            "/api/snippets/*rest",
+            get(|Path(path): Path<String>| async move {
+                match get_snippet_source(&path, &local_modules, &snippets) {
                     Ok(source) => Ok(WithContentType("application/javascript", source)),
                     Err(e) => {
-                        tracing::error!("failed to serve snippet `{uri}`: {e}");
+                        tracing::error!("failed to serve snippet `{path}`: {e}");
                         Err(e)
                     }
                 }
             }),
         )
-        .fallback(serve_dir)
+        .fallback_service(serve_dir)
         .layer(middleware_stack);
 
     let mut address_string = options.address;
@@ -109,11 +109,10 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
 }
 
 fn get_snippet_source(
-    uri: &Uri,
+    path: &str,
     local_modules: &HashMap<String, String>,
     snippets: &HashMap<String, Vec<String>>,
 ) -> Result<String, &'static str> {
-    let path = uri.path().trim_start_matches("/");
     if let Some(module) = local_modules.get(path) {
         return Ok(module.clone());
     };
@@ -122,9 +121,9 @@ fn get_snippet_source(
     let index = inline_snippet_name
         .strip_prefix("inline")
         .and_then(|path| path.strip_suffix(".js"))
-        .ok_or("invalid snippet name")?;
+        .ok_or("invalid snippet name in path")?;
     let index: usize = index.parse().map_err(|_| "invalid index")?;
-    let snippet = snippets.get(snippet).unwrap().get(index).ok_or("snippet index out of bounds")?;
+    let snippet = snippets.get(snippet).ok_or("invalid snippet name")?.get(index).ok_or("snippet index out of bounds")?;
     Ok(snippet.clone())
 }
 
@@ -137,7 +136,7 @@ impl<T: IntoResponse> IntoResponse for WithContentType<T> {
     }
 }
 
-async fn internal_server_error(error: std::io::Error) -> impl IntoResponse {
+async fn internal_server_error(error: impl std::fmt::Display) -> impl IntoResponse {
     (StatusCode::INTERNAL_SERVER_ERROR, format!("Unhandled internal error: {}", error))
 }
 
