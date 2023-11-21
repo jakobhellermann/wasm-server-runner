@@ -53,7 +53,7 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
     let version = generate_version();
 
     // Use a custom `index.html` if the user has one in the serving directory.
-    let html_source = std::fs::read_to_string(&options.directory.join("index.html"))
+    let html_source = std::fs::read_to_string(options.directory.join("index.html"))
         .map(Cow::Owned)
         .unwrap_or_else(|_| Cow::Borrowed(include_str!("../static/index.html")));
     let mut html = html_source.replace("{{ TITLE }}", &options.title);
@@ -147,37 +147,35 @@ async fn handle_ws(mut socket: WebSocket) {
             Err(e) => return tracing::warn!("got error {e}, closing websocket connection"),
         };
 
-        match msg {
-            ws::Message::Text(msg) => {
-                let (mut level, mut msg) = msg.split_once(',').unwrap();
+        let ws::Message::Text(msg) = msg else {
+            unreachable!("got non-text message from websocket")
+        };
+        let (mut level, mut msg) = msg.split_once(',').unwrap();
 
-                if let Some(rest) = msg.strip_prefix("TRACE ") {
-                    level = "debug";
-                    msg = rest;
-                } else if let Some(rest) = msg.strip_prefix("DEBUG ") {
-                    level = "debug";
-                    msg = rest;
-                } else if let Some(rest) = msg.strip_prefix("INFO ") {
-                    level = "info";
-                    msg = rest;
-                } else if let Some(rest) = msg.strip_prefix("WARN ") {
-                    level = "warn";
-                    msg = rest;
-                } else if let Some(rest) = msg.strip_prefix("ERROR ") {
-                    level = "error";
-                    msg = rest;
-                }
+        if let Some(rest) = msg.strip_prefix("TRACE ") {
+            level = "debug";
+            msg = rest;
+        } else if let Some(rest) = msg.strip_prefix("DEBUG ") {
+            level = "debug";
+            msg = rest;
+        } else if let Some(rest) = msg.strip_prefix("INFO ") {
+            level = "info";
+            msg = rest;
+        } else if let Some(rest) = msg.strip_prefix("WARN ") {
+            level = "warn";
+            msg = rest;
+        } else if let Some(rest) = msg.strip_prefix("ERROR ") {
+            level = "error";
+            msg = rest;
+        }
 
-                match level {
-                    "trace" => tracing::trace!(target: "app", "{msg}"),
-                    "debug" => tracing::debug!(target: "app", "{msg}"),
-                    "info" => tracing::info!(target: "app", "{msg}"),
-                    "warn" => tracing::warn!(target: "app", "{msg}"),
-                    "error" => tracing::error!(target: "app", "{msg}"),
-                    _ => unimplemented!("unexpected log level {level}: {msg}"),
-                }
-            }
-            _ => {}
+        match level {
+            "trace" => tracing::trace!(target: "app", "{msg}"),
+            "debug" => tracing::debug!(target: "app", "{msg}"),
+            "info" => tracing::info!(target: "app", "{msg}"),
+            "warn" => tracing::warn!(target: "app", "{msg}"),
+            "error" => tracing::error!(target: "app", "{msg}"),
+            _ => unimplemented!("unexpected log level {level}: {msg}"),
         }
     }
 }
