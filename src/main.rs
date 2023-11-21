@@ -11,20 +11,28 @@ pub type Result<T, E = anyhow::Error> = std::result::Result<T, E>;
 mod server;
 mod wasm_bindgen;
 
+fn bool_option(name: &str, default: bool) -> Result<bool, anyhow::Error> {
+    match std::env::var(name) {
+        Ok(value) if ["true", "1", "yes"].contains(&value.as_str()) => Ok(true),
+        Ok(value) if ["false", "0", "no"].contains(&value.as_str()) => Ok(false),
+        Ok(value) => Err(anyhow!("unexpected option {name}={value}, expected true,1 or false,0")),
+        Err(_) => Ok(default),
+    }
+}
+fn option(name: &str, default: &str) -> String {
+    std::env::var(name).unwrap_or(default.to_owned())
+}
+
 fn main() -> Result<(), anyhow::Error> {
     let filter = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new("info,tower_http=debug,walrus=error"));
     tracing_subscriber::fmt::fmt().without_time().with_env_filter(filter).init();
 
     let title = std::env::var("CARGO_PKG_NAME").unwrap_or_else(|_| "".to_string());
-    let address =
-        std::env::var("WASM_SERVER_RUNNER_ADDRESS").unwrap_or_else(|_| "127.0.0.1".to_string());
-    let directory =
-        std::env::var("WASM_SERVER_RUNNER_DIRECTORY").unwrap_or_else(|_| String::from("."));
-    let https =
-        std::env::var("WASM_SERVER_RUNNER_HTTPS").unwrap_or_else(|_| String::from("0")) == "1";
-    let no_module =
-        std::env::var("WASM_SERVER_RUNNER_NO_MODULE").unwrap_or_else(|_| String::from("0")) == "1";
+    let address = option("WASM_SERVER_RUNNER_ADDRESS", "127.0.0.1");
+    let directory = option("WASM_SERVER_RUNNER_DIRECTORY", ".");
+    let https = bool_option("WASM_SERVER_RUNNER_HTTPS", false)?;
+    let no_module = bool_option("WASM_SERVER_RUNNER_NO_MODULE", false)?;
 
     let options = Options { title, address, directory, https, no_module };
 
