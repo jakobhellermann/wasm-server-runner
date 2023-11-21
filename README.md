@@ -33,7 +33,7 @@ wasm-server-runner path/to/file.wasm
 Example output:
 ```yaml
 INFO wasm_server_runner: wasm output is 49.79kb large
-INFO wasm_server_runner::server: starting webserver at http://127.0.0.1:1334
+INFO wasm_server_runner: starting webserver at http://127.0.0.1:1334
 ```
 
 The website will reload when the server is restarted and serve files relative to the current directory.

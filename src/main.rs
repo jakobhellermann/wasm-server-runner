@@ -25,7 +25,7 @@ fn option(name: &str, default: &str) -> String {
 
 fn main() -> Result<(), anyhow::Error> {
     let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("info,tower_http=debug,walrus=error"));
+        .unwrap_or_else(|_| EnvFilter::new("info,app=debug,tower_http=debug,walrus=error"));
     tracing_subscriber::fmt::fmt().without_time().with_env_filter(filter).init();
 
     let title = std::env::var("CARGO_PKG_NAME").unwrap_or_else(|_| "".to_string());

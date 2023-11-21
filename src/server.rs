@@ -6,7 +6,8 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 
 use axum::error_handling::HandleError;
-use axum::extract::Path;
+use axum::extract::ws::{self, WebSocket};
+use axum::extract::{Path, WebSocketUpgrade};
 use axum::headers::HeaderName;
 use axum::http::{HeaderValue, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
@@ -75,6 +76,7 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
         .route("/api/wasm.js", get(|| async { WithContentType("application/javascript", js) }))
         .route("/api/wasm.wasm", get(|| async { WithContentType("application/wasm", wasm) }))
         .route("/api/version", get(move || async { version }))
+        .route("/ws", get(|ws: WebSocketUpgrade| async { ws.on_upgrade(handle_ws) }))
         .route(
             "/api/snippets/*rest",
             get(|Path(path): Path<String>| async move {
@@ -102,13 +104,13 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
         let config =
             RustlsConfig::from_der(vec![certificate.certificate], certificate.private_key).await?;
 
-        tracing::info!("starting webserver at https://{}", addr);
+        tracing::info!(target: "wasm_server_runner", "starting webserver at https://{}", addr);
         axum_server_dual_protocol::bind_dual_protocol(addr, config)
             .set_upgrade(true)
             .serve(app.into_make_service())
             .await?;
     } else {
-        tracing::info!("starting webserver at http://{}", addr);
+        tracing::info!(target: "wasm_server_runner", "starting webserver at http://{}", addr);
         axum_server::bind(addr).serve(app.into_make_service()).await?;
     }
 
@@ -136,6 +138,48 @@ fn get_snippet_source(
         .get(index)
         .ok_or("snippet index out of bounds")?;
     Ok(snippet.clone())
+}
+
+async fn handle_ws(mut socket: WebSocket) {
+    while let Some(msg) = socket.recv().await {
+        let msg = match msg {
+            Ok(msg) => msg,
+            Err(e) => return tracing::warn!("got error {e}, closing websocket connection"),
+        };
+
+        match msg {
+            ws::Message::Text(msg) => {
+                let (mut level, mut msg) = msg.split_once(',').unwrap();
+
+                if let Some(rest) = msg.strip_prefix("TRACE ") {
+                    level = "debug";
+                    msg = rest;
+                } else if let Some(rest) = msg.strip_prefix("DEBUG ") {
+                    level = "debug";
+                    msg = rest;
+                } else if let Some(rest) = msg.strip_prefix("INFO ") {
+                    level = "info";
+                    msg = rest;
+                } else if let Some(rest) = msg.strip_prefix("WARN ") {
+                    level = "warn";
+                    msg = rest;
+                } else if let Some(rest) = msg.strip_prefix("ERROR ") {
+                    level = "error";
+                    msg = rest;
+                }
+
+                match level {
+                    "trace" => tracing::trace!(target: "app", "{msg}"),
+                    "debug" => tracing::debug!(target: "app", "{msg}"),
+                    "info" => tracing::info!(target: "app", "{msg}"),
+                    "warn" => tracing::warn!(target: "app", "{msg}"),
+                    "error" => tracing::error!(target: "app", "{msg}"),
+                    _ => unimplemented!("unexpected log level {level}: {msg}"),
+                }
+            }
+            _ => {}
+        }
+    }
 }
 
 struct WithContentType<T>(&'static str, T);

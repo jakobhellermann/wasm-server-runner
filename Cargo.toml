@@ -16,7 +16,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 wasm-bindgen-cli-support = "0.2"
 
-axum = { version = "0.6", default-features = false, features = ["http1", "headers"] }
+axum = { version = "0.6", default-features = false, features = ["http1", "headers", "ws"] }
 axum-server = { version = "0.5", features = ["tls-rustls"] }
 axum-server-dual-protocol = "0.5"
 directories = "4"

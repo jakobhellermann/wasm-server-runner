@@ -57,6 +57,112 @@
             intervalToken = setInterval(reloadIfChanged, reloadInterval);
         }
 
+        let queuedMessages = [];
+        let websocket = new WebSocket(((window.location.protocol === "https:") ? "wss://" : "ws://") + window.location.host + "/ws");
+
+        function formatValue(value) {
+            return String(value); // TODO
+        }
+
+        function formatMessage(args) {
+            // https://github.com/denoland/deno/blob/32025dca5ca76695d463383372cd5f88687e2e9d/ext/console/01_console.js#L3091
+
+            let first = args[0];
+            let a = 0;
+            let string = "";
+
+            if (typeof first === "string" && args.length > 1) {
+                a++;
+
+                let appendedChars = 0;
+
+                for (let i = 0; i < first.length; i++) {
+                    if (first[i] == '%') {
+                        let char = first[++i];
+
+                        if (a < args.length) {
+                            let formattedArg = null;
+                            if (char === 's') {
+                                formattedArg = String(args[a++]);
+                            } else if (char === 'd' || char === 'i') {
+                                let value = args[a++];
+                                if (typeof value === "bigint") {
+                                    formattedArg = `${value}n`;
+                                } else if (typeof value === "number") {
+                                    formattedArg = String(parseInt(String(value)));
+                                } else {
+                                    formattedArg = "NaN";
+                                }
+                                formattedArg = `${value}n`;
+                            } else if (char === 'f') {
+                                let value = args[a++];
+                                if (typeof value == "number") {
+                                    formattedArg = `${value}`;
+                                } else {
+                                    formattedArg = "NaN";
+                                }
+                            } else if (char === 'o' || char === 'O') {
+                                formattedArg = formatValue(args[a++]);
+                            }
+                            else if (char === 'c') {
+                                let value = args[a++];
+                                formattedArg = ""; // TODO css
+                            }
+
+                            if (formattedArg != null) {
+                                string += first.slice(appendedChars, i - 1) + formattedArg;
+                                appendedChars = i + 1;
+                            }
+                        }
+
+                        if (char === '%') {
+                            string += first.slice(appendedChars, i - 1) + '%';
+                            appendedChars = i + 1;
+                        }
+                    }
+                }
+
+                string += first.slice(appendedChars);
+            }
+
+            for (; a < args.length; a++) {
+                if (a > 0) string += " ";
+
+                if (typeof args[a] === "string") {
+                    string += args[a];
+                } else {
+                    string += formatValue(args[a]);
+                }
+            }
+
+            return string;
+        }
+
+        function sendLogMessage([level, args]) {
+            let msg = formatMessage(args);
+            websocket.send(level + "," + msg);
+        }
+        websocket.onerror = console.error;
+        websocket.onopen = () => {
+            for (const args of queuedMessages) sendLogMessage(args);
+            queuedMessages = [];
+        };
+
+        let logMethods = ["trace", "debug", "info", "warn", "error", "log"];
+        for (const logMethod of logMethods) {
+            let stdlog = console[logMethod].bind(console);
+            console[logMethod] = function (...args) {
+                stdlog(...args);
+
+                let item = [logMethod, args];
+                if (websocket.readyState === 1) {
+                    sendLogMessage(item);
+                } else {
+                    queuedMessages.push(item);
+                }
+            };
+        }
+
         run();
         startReloadInterval();
     </script>
