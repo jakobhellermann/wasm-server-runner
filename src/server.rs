@@ -1,5 +1,7 @@
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::net::SocketAddr;
+use std::path::PathBuf;
 
 use axum::error_handling::HandleError;
 use axum::extract::Path;
@@ -25,7 +27,7 @@ fn generate_version() -> String {
 pub struct Options {
     pub title: String,
     pub address: String,
-    pub directory: String,
+    pub directory: PathBuf,
     pub https: bool,
     pub no_module: bool,
 }
@@ -48,27 +50,19 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
     let version = generate_version();
 
     // Use a custom `index.html` if the user has one in the serving directory.
-    let mut html = match std::fs::read_to_string(
-        std::path::Path::new(&options.directory).join("index.html"),
-    ) {
-        Ok(user_html) => user_html.replace("{{ TITLE }}", &options.title),
-
-        // Fall back to the bundled `index.html`.
-        Err(_) => {
-            let default_html = include_str!("../static/index.html");
-
-            // Calling `replace` here gives us a `String`, which is what the other branch evaluates
-            // to.
-            default_html.replace("{{ TITLE }}", &options.title)
-        }
-    };
+    let html_source = std::fs::read_to_string(&options.directory.join("index.html"))
+        .map(Cow::Owned)
+        .unwrap_or_else(|_| Cow::Borrowed(include_str!("../static/index.html")));
+    let mut html = html_source.replace("{{ TITLE }}", &options.title);
 
     if options.no_module {
-        html = html.replace("{{ NO_MODULE }}", "<script src=\"./api/wasm.js\"></script>");
-        html = html.replace("{{ MODULE }}", "");
+        html = html
+            .replace("{{ NO_MODULE }}", "<script src=\"./api/wasm.js\"></script>")
+            .replace("{{ MODULE }}", "");
     } else {
-        html = html.replace("{{ MODULE }}", "import wasm_bindgen from './api/wasm.js';");
-        html = html.replace("{{ NO_MODULE }}", "");
+        html = html
+            .replace("{{ MODULE }}", "import wasm_bindgen from './api/wasm.js';")
+            .replace("{{ NO_MODULE }}", "");
     };
 
     let serve_dir =

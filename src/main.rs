@@ -34,7 +34,7 @@ fn main() -> Result<(), anyhow::Error> {
     let https = bool_option("WASM_SERVER_RUNNER_HTTPS", false)?;
     let no_module = bool_option("WASM_SERVER_RUNNER_NO_MODULE", false)?;
 
-    let options = Options { title, address, directory, https, no_module };
+    let options = Options { title, address, directory: PathBuf::from(directory), https, no_module };
 
     let wasm_file = std::env::args()
         .nth(1)
