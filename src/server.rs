@@ -147,9 +147,12 @@ async fn handle_ws(mut socket: WebSocket) {
             Err(e) => return tracing::warn!("got error {e}, closing websocket connection"),
         };
 
-        let ws::Message::Text(msg) = msg else {
-            unreachable!("got non-text message from websocket")
+        let msg = match msg {
+            ws::Message::Text(msg) => msg,
+            ws::Message::Close(_) => return,
+            _ => unreachable!("got non-text message from websocket"),
         };
+
         let (mut level, mut msg) = msg.split_once(',').unwrap();
 
         if let Some(rest) = msg.strip_prefix("TRACE ") {
