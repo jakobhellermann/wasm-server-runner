@@ -29,7 +29,7 @@ pub struct Options {
 }
 
 pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<()> {
-    let WasmBindgenOutput { js, compressed_wasm, snippets, local_modules } = output;
+    let WasmBindgenOutput { js, wasm, snippets, local_modules } = output;
 
     let middleware_stack = ServiceBuilder::new()
         .layer(CompressionLayer::new())
@@ -58,9 +58,7 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
     let serve_dir =
         get_service(ServeDir::new(options.directory)).handle_error(internal_server_error);
 
-    let serve_wasm = || async move {
-        ([("content-encoding", "br")], WithContentType("application/wasm", compressed_wasm))
-    };
+    let serve_wasm = || async move { WithContentType("application/wasm", wasm) };
 
     let app = Router::new()
         .route("/", get(move || async { Html(html) }))
