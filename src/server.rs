@@ -160,32 +160,34 @@ async fn handle_ws(mut socket: WebSocket) {
             _ => unreachable!("got non-text message from websocket"),
         };
 
-        let (mut level, mut msg) = msg.split_once(',').unwrap();
+        let (mut level, mut text) = msg.split_once(',').unwrap();
 
-        if let Some(rest) = msg.strip_prefix("TRACE ") {
+        if let Some(rest) = text.strip_prefix("TRACE ") {
             level = "debug";
-            msg = rest;
-        } else if let Some(rest) = msg.strip_prefix("DEBUG ") {
+            text = rest;
+        } else if let Some(rest) = text.strip_prefix("DEBUG ") {
             level = "debug";
-            msg = rest;
-        } else if let Some(rest) = msg.strip_prefix("INFO ") {
+            text = rest;
+        } else if let Some(rest) = text.strip_prefix("INFO ") {
             level = "info";
-            msg = rest;
-        } else if let Some(rest) = msg.strip_prefix("WARN ") {
+            text = rest;
+        } else if let Some(rest) = text.strip_prefix("WARN ") {
             level = "warn";
-            msg = rest;
-        } else if let Some(rest) = msg.strip_prefix("ERROR ") {
+            text = rest;
+        } else if let Some(rest) = text.strip_prefix("ERROR ") {
             level = "error";
-            msg = rest;
+            text = rest;
         }
 
         match level {
-            "trace" => tracing::trace!(target: "app", "{msg}"),
-            "debug" => tracing::debug!(target: "app", "{msg}"),
-            "info" => tracing::info!(target: "app", "{msg}"),
-            "warn" => tracing::warn!(target: "app", "{msg}"),
-            "error" => tracing::error!(target: "app", "{msg}"),
-            _ => unimplemented!("unexpected log level {level}: {msg}"),
+            "log" => tracing::info!(target: "app", "{text}"),
+
+            "trace" => tracing::trace!(target: "app", "{text}"),
+            "debug" => tracing::debug!(target: "app", "{text}"),
+            "info" => tracing::info!(target: "app", "{text}"),
+            "warn" => tracing::warn!(target: "app", "{text}"),
+            "error" => tracing::error!(target: "app", "{text}"),
+            _ => unimplemented!("unexpected log level {level}: {text}"),
         }
     }
 }
