@@ -46,7 +46,6 @@ All configuration options can be specified via environment variables.
 <summary>WASM_SERVER_RUNNER_ADDRESS</summary>
 
 Default: `127.0.0.1`
-
 Control the address that the server listens on. Set to `0.0.0.0` to allow access from anywhere.
 
 </details>
@@ -58,8 +57,23 @@ Default: `.`
 
 Can be used to specify where relative path requests are loaded from.
 
-If there is an `index.html` file within this directory it will be used instead of [the
-default](static/index.html).
+</details>
+
+<details>
+<summary>WASM_SERVER_RUNNER_CUSTOM_INDEX_HTML</summary>
+
+Default: _none_
+
+When set, will try to load the custom `index.html` from that path instead of [the
+default](static/index.html). Can be relative to the directory.
+
+*Note*: To support both module and non-module style the `index.html` needs to have specific string that will be replaced at runtime. The body should contain something like
+```html
+{{ NO_MODULE }}
+<script type="module">
+    // {{ MODULE }}
+</script>
+```
 
 </details>
 

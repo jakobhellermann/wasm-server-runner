@@ -31,10 +31,19 @@ fn main() -> Result<(), anyhow::Error> {
     let title = std::env::var("CARGO_PKG_NAME").unwrap_or_else(|_| "".to_string());
     let address = option("WASM_SERVER_RUNNER_ADDRESS", "127.0.0.1");
     let directory = option("WASM_SERVER_RUNNER_DIRECTORY", ".");
+    let custom_index_html =
+        std::env::var("WASM_SERVER_RUNNER_CUSTOM_INDEX_HTML").ok().map(PathBuf::from);
     let https = bool_option("WASM_SERVER_RUNNER_HTTPS", false)?;
     let no_module = bool_option("WASM_SERVER_RUNNER_NO_MODULE", false)?;
 
-    let options = Options { title, address, directory: PathBuf::from(directory), https, no_module };
+    let options = Options {
+        title,
+        address,
+        directory: PathBuf::from(directory),
+        custom_index_html,
+        https,
+        no_module,
+    };
 
     let wasm_file = std::env::args()
         .nth(1)

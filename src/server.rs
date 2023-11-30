@@ -31,6 +31,7 @@ pub struct Options {
     pub title: String,
     pub address: String,
     pub directory: PathBuf,
+    pub custom_index_html: Option<PathBuf>,
     pub https: bool,
     pub no_module: bool,
 }
@@ -52,10 +53,16 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
 
     let version = generate_version();
 
-    // Use a custom `index.html` if the user has one in the serving directory.
-    let html_source = std::fs::read_to_string(options.directory.join("index.html"))
-        .map(Cow::Owned)
-        .unwrap_or_else(|_| Cow::Borrowed(include_str!("../static/index.html")));
+    let html_source = options
+        .custom_index_html
+        .map(|index_html_path| {
+            let path = match index_html_path.is_absolute() {
+                true => index_html_path,
+                false => options.directory.join(index_html_path),
+            };
+            std::fs::read_to_string(path).map(Cow::Owned)
+        })
+        .unwrap_or_else(|| Ok(Cow::Borrowed(include_str!("../static/index.html"))))?;
     let mut html = html_source.replace("{{ TITLE }}", &options.title);
 
     if options.no_module {
