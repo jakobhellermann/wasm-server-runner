@@ -1,3 +1,6 @@
+## 0.6.1
+- hide winit's "Using exceptions for control flow" error
+
 ## 0.6.0
 - only load a custom `index.html` when the `WASM_SERVER_RUNNER_CUSTOM_INDEX_HTML` environment variable is set
 - fix a panic during log relaying
