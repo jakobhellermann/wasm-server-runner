@@ -1,3 +1,7 @@
+## 0.6.0
+- only load a custom `index.html` when the `WASM_SERVER_RUNNER_CUSTOM_INDEX_HTML` environment variable is set
+- fix a panic during log relaying
+
 ## 0.5.0
 - relay logging from website back to console
 - cache https certificates
