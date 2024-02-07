@@ -1,6 +1,6 @@
 [package]
 name = "wasm-server-runner"
-version = "0.6.1"
+version = "0.6.2"
 edition = "2021"
 readme = "README.md"
 repository = "https://github.com/jakobhellermann/wasm-server-runner/"
@@ -16,12 +16,14 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 wasm-bindgen-cli-support = "0.2"
 
-axum = { version = "0.6", default-features = false, features = ["http1", "headers", "ws"] }
-axum-server = { version = "0.5", features = ["tls-rustls"] }
-axum-server-dual-protocol = "0.5"
-directories = "4"
+axum = { version = "0.7", default-features = false, features = ["http1", "ws"] }
+axum-extra = { version = "0.9", features = [] }
+axum-server = { version = "0.6", features = ["tls-rustls"] }
+axum-server-dual-protocol = "0.6"
+directories = "5"
 tokio = { version = "1.11", default-features = false, features = ["rt-multi-thread"] }
-tower-http = { version = "0.4", features = ["compression-full", "fs", "set-header", "trace"] }
+tower-http = { version = "0.5", features = ["compression-full", "fs", "set-header", "trace"] }
+http = "1.0"
 tower = "0.4"
 fastrand = "2.0"
-rcgen = { version = "0.11", default-features = false }
+rcgen = { version = "0.12", default-features = false, features = ["ring"] }
