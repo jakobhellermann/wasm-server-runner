@@ -14,7 +14,7 @@ pub fn generate(options: &Options, wasm_file: &Path) -> Result<WasmBindgenOutput
     debug!("running wasm-bindgen...");
     let start = std::time::Instant::now();
     let mut bindgen = wasm_bindgen_cli_support::Bindgen::new();
-    bindgen.input_path(wasm_file).typescript(false).reference_types(true);
+    bindgen.input_path(wasm_file).typescript(false);
 
     if options.no_module {
         bindgen.no_modules(true)?;
