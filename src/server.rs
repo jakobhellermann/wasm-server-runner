@@ -85,7 +85,7 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
         .route("/api/version", get(move || async { version }))
         .route("/ws", get(|ws: WebSocketUpgrade| async { ws.on_upgrade(handle_ws) }))
         .route(
-            "/api/snippets/*rest",
+            "/api/snippets/{*rest}",
             get(|Path(path): Path<String>| async move {
                 match get_snippet_source(&path, &local_modules, &snippets) {
                     Ok(source) => Ok(WithContentType("application/javascript", source)),
