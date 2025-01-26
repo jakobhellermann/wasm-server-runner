@@ -10,20 +10,20 @@ categories = ["command-line-utilities", "development-tools", "development-tools:
 description = "cargo run for wasm programs"
 
 [dependencies]
+wasm-bindgen-cli-support = "0.2"
 anyhow = "1.0"
+
+tokio = { version = "1.11", default-features = false, features = ["rt-multi-thread"] }
+axum = { version = "0.8", default-features = false, features = ["http1", "ws"] }
+axum-server = { version = "0.7", features = ["tls-rustls"] }
+axum-server-dual-protocol = "0.7"
+tower-http = { version = "0.5", features = ["compression-full", "fs", "set-header", "trace"] }
+tower = "0.4"
+http = "1.0"
+rcgen = { version = "0.12", default-features = false, features = ["ring"] }
+
 tracing = { version = "0.1", default-features = false, features = ["release_max_level_debug"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
-wasm-bindgen-cli-support = "0.2"
-
-axum = { version = "0.7", default-features = false, features = ["http1", "ws"] }
-axum-extra = { version = "0.9", features = [] }
-axum-server = { version = "0.6", features = ["tls-rustls"] }
-axum-server-dual-protocol = "0.6"
-directories = "5"
-tokio = { version = "1.11", default-features = false, features = ["rt-multi-thread"] }
-tower-http = { version = "0.5", features = ["compression-full", "fs", "set-header", "trace"] }
-http = "1.0"
-tower = "0.4"
+directories = "6"
 fastrand = "2.0"
-rcgen = { version = "0.12", default-features = false, features = ["ring"] }
