@@ -1,3 +1,17 @@
+## 1.0.0
+
+- Improve the error message you get when `wasm-bindgen` versions mismatch.
+- remove `Bindgen::reference_types` in favor of runtime detection
+- fix `WASM_SERVER_RUNNER_ADDRESS` parsing: it now supports `[::1]` without a specified port
+- update dependencies
+
+## 0.6.3
+- update dependencies
+- remove `Bindgen::weak_refs` in favor of runtime detection
+
+## 0.6.2
+- update dependencies
+
 ## 0.6.1
 - hide winit's "Using exceptions for control flow" error
 
