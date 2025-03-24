@@ -50,7 +50,7 @@ fn main() -> Result<(), anyhow::Error> {
         .map(PathBuf::from)
         .ok_or_else(|| anyhow!("expected wasm file as argument"))?;
 
-    let is_wasm_file = wasm_file.extension().map_or(false, |e| e == "wasm");
+    let is_wasm_file = wasm_file.extension().is_some_and(|e| e == "wasm");
     ensure!(is_wasm_file, "expected to be run with a wasm target");
 
     let output = wasm_bindgen::generate(&options, &wasm_file)?;
