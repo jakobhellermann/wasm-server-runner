@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
+use anyhow::Context as _;
 use axum::error_handling::HandleError;
 use axum::extract::ws::{self, WebSocket};
 use axum::extract::{Path, WebSocketUpgrade};
@@ -99,12 +100,14 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
         .fallback_service(serve_dir)
         .layer(middleware_stack);
 
-    let mut address_string = options.address;
-    if !address_string.contains(':') {
-        address_string +=
-            &(":".to_owned() + &pick_port::pick_free_port(1334, 10).unwrap_or(1334).to_string());
-    }
-    let addr: SocketAddr = address_string.parse().expect("Couldn't parse address");
+    let addr: SocketAddr = options
+        .address
+        .parse()
+        .or_else(|_| {
+            format!("{}:{}", options.address, pick_port::pick_free_port(1334, 10).unwrap_or(1334))
+                .parse()
+        })
+        .context("Error parsing WASM_SERVER_RUNNER_ADDRESS")?;
 
     if options.https {
         let certificate = certificate::certificate()?;
