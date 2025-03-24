@@ -17,8 +17,8 @@ tokio = { version = "1.11", default-features = false, features = ["rt-multi-thre
 axum = { version = "0.8", default-features = false, features = ["http1", "ws"] }
 axum-server = { version = "0.7", features = ["tls-rustls"] }
 axum-server-dual-protocol = "0.7"
-tower-http = { version = "0.5", features = ["compression-full", "fs", "set-header", "trace"] }
-tower = "0.4"
+tower-http = { version = "0.6", features = ["compression-full", "fs", "set-header", "trace"] }
+tower = "0.5"
 http = "1.0"
 rcgen = { version = "0.12", default-features = false, features = ["ring"] }
 
