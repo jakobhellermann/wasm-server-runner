@@ -91,7 +91,7 @@ fn generate_internal() -> Result<Certificate> {
     let certificate = rcgen::generate_simple_self_signed([String::from("localhost")])?;
 
     Ok(Certificate {
-        certificate: certificate.serialize_der()?,
-        private_key: certificate.serialize_private_key_der(),
+        certificate: certificate.cert.der().to_vec(),
+        private_key: certificate.key_pair.serialize_der(),
     })
 }
