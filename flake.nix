@@ -56,12 +56,6 @@
 
         devShells.default = pkgs.mkShell {
           inherit buildInputs nativeBuildInputs;
-          
-          shellHook = ''
-            echo "wasm-server-runner development environment"
-            echo "Run 'cargo build' to build the project"
-            echo "Run 'cargo run' to run the project"
-          '';
         };
       });
 }
