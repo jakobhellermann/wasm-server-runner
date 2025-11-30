@@ -1,7 +1,7 @@
 mod certificate;
 
 use std::borrow::Cow;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
@@ -130,7 +130,7 @@ pub async fn run_server(options: Options, output: WasmBindgenOutput) -> Result<(
 fn get_snippet_source(
     path: &str,
     local_modules: &HashMap<String, String>,
-    snippets: &HashMap<String, Vec<String>>,
+    snippets: &BTreeMap<String, Vec<String>>,
 ) -> Result<String, &'static str> {
     if let Some(module) = local_modules.get(path) {
         return Ok(module.clone());

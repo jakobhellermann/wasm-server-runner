@@ -20,7 +20,7 @@ axum-server-dual-protocol = "0.7"
 tower-http = { version = "0.6", features = ["compression-full", "fs", "set-header", "trace"] }
 tower = "0.5"
 http = "1.0"
-rcgen = { version = "0.13", default-features = false, features = ["aws_lc_rs"] }
+rcgen = { version = "0.14", default-features = false, features = ["aws_lc_rs"] }
 
 tracing = { version = "0.1", default-features = false, features = ["release_max_level_debug"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }

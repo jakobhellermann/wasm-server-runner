@@ -1,13 +1,13 @@
 use crate::server::Options;
 use crate::Result;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
 use tracing::debug;
 
 pub struct WasmBindgenOutput {
     pub js: String,
     pub wasm: Vec<u8>,
-    pub snippets: HashMap<String, Vec<String>>,
+    pub snippets: BTreeMap<String, Vec<String>>,
     pub local_modules: HashMap<String, String>,
 }
 pub fn generate(options: &Options, wasm_file: &Path) -> Result<WasmBindgenOutput> {
